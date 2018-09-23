@@ -15,7 +15,7 @@ from . import base
 CarStatus = collections.namedtuple(
     "CarStatus," 
     ["user_angle", "user_throttle", "pilot_angle", "pilot_throttle",
-     "us_dist", "pilot_mode"])
+     "us_dist", "mode"])
 
 
 def clip(v, _min, _max):
@@ -81,11 +81,11 @@ class BluePill(base.Part):
         self.s.write(msg)
         return self._recieve()
 
-    def __call__(self, pilot_angle, pilot_throttle, mode):
+    def __call__(self, pilot_angle, pilot_throttle, mode, force_mode=False):
         """Steer the car and select autonomy."""
         auto_enable = 0
         auto_nreset = 0
-        if mode != self.last_mode:
+        if (mode != self.last_mode) or force_mode:
             auto_enable = self.MODES[mode]
             auto_nreset = ~auto_enable & 0x03
             self.last_mode = mode
@@ -100,7 +100,11 @@ class BluePill(base.Part):
                            self.CMD_SET_SERVOS,
                            auto_enable, auto_nreset)
         self.s.write(msg)
-        return self._recieve()
+        ret = self._recieve()
+        if mode != ret.mode:
+            print("Warning: The desired mode %s was not set!\n"
+                  "Probably the autopilot was disengaged by breaking. "
+                  "To re-enable use the parameter force_mode." % mode)
 
     def stop_and_disengage_autonomy(self):
         """Stop the car and disengage the autopilot."""
