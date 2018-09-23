@@ -123,3 +123,13 @@ class Robot:
         if self.autonomy_warnings and mode != 'local':
             print("WARNING: Autonomy is disabled. Only remote control will have effect on the car")
         self.previous_angle, self.previous_throttle = angle, throttle
+
+    def reenable_autonomy(self):
+        self.bp.run(0, 0, 'user')
+        time.sleep(0.1)
+        self.bp.run(0, 0, 'local')  # Jest z  jakiegoś powodu potrzebne, żebt BluePill włączył tryb 'local'
+        time.sleep(0.1)
+
+    def shutdown(self):
+        self.bp.shutdown()
+
