@@ -15,7 +15,7 @@ class TubWriter(datastore.Tub):
     def __init__(self, *args, **kwargs):
         super(TubWriter, self).__init__(*args, **kwargs)
 
-    def __call__(self, *args):
+    def write(self, *args):
         """
         Accepts values, pairs them with their input keys and saves them
         to disk.
@@ -30,7 +30,7 @@ class TubReader(datastore.Tub):
         super(TubReader, self).__init__(*args, **kwargs)
         self.read_ix = 0
 
-    def __call__(self, *args):
+    def read(self, *args):
         """
         Accepts keys to read from the tub and retrieves them sequentially.
         """

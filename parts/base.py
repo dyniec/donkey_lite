@@ -1,3 +1,7 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 import logging
 import threading
 
@@ -6,8 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 class Part(object):
-    def __call__(self):
-        raise NotImplementedError
+    pass
 
 class ThreadedPart(Part):
     def __init__(self):

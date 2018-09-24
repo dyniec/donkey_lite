@@ -44,7 +44,7 @@ def arr_to_binary(arr):
     return f.getvalue()
 
 
-class CameraStream(tornado.web.Application):
+class WebCameraStream(tornado.web.Application):
     port = 8887
 
     def __init__(self):
@@ -71,7 +71,7 @@ class CameraStream(tornado.web.Application):
         self._thread.start()
     
     def say_hello(self):
-        print("You can watch the camera stream at http://%s/video" %
+        print("You can watch the camera stream at http://%s:8887/video" %
               (get_ip_address(), ))
 
     def stop(self):
@@ -81,7 +81,7 @@ class CameraStream(tornado.web.Application):
         pass
         # self.stop()
 
-    def __call__(self, img_arr):
+    def set_image(self, img_arr):
         self.img_arr = img_arr
 
 

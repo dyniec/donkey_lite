@@ -13,9 +13,9 @@ from . import base
 
 
 CarStatus = collections.namedtuple(
-    "CarStatus," 
+    "CarStatus", 
     ["user_angle", "user_throttle", "pilot_angle", "pilot_throttle",
-     "us_dist", "mode"])
+     "distance", "mode"])
 
 
 def clip(v, _min, _max):
@@ -49,15 +49,28 @@ class BluePill(base.Part):
     CMD_SET_THROTTLE_LIMITS = 0x03
 
 
-    def __init__(self, port,
-                 angle_neutral=4350, angle_gain=900,
-                 throttle_neutral=4368, throttle_gain=1000, throttle_clip=1.0):
+    def __init__(self,
+                 port="/dev/ttyACM0",
+                 steer_min=3000,
+                 steer_mid=4500,
+                 steer_max=6000,
+                 throttle_min=2800,
+                 throttle_mid=4500,
+                 throttle_max=6400,
+                 ):
         self.s = serial.Serial(port)
-        self.angle_neutral = angle_neutral
-        self.angle_gain = float(angle_gain)
-        self.throttle_neutral = throttle_neutral
-        self.throttle_gain = float(throttle_gain)
-        self.throttle_clip = throttle_clip
+        self.angle_neutral = steer_mid
+        self.angle_gain = max(steer_mid - steer_min,
+                              steer_max - steer_mid)
+        self.angle_clip = min(steer_mid - steer_min,
+                              steer_max - steer_mid
+                              ) / self.angle_gain
+        self.throttle_neutral = throttle_mid
+        self.throttle_gain = max(throttle_mid - throttle_min,
+                                 throttle_max - throttle_mid)
+        self.throttle_clip = min(throttle_mid - steer_min,
+                                 throttle_max - throttle_mid
+                                ) / self.throttle_gain
         self.last_mode = None
         self.pilot_state = (0, 0)
         atexit.register(self.stop_and_disengage_autonomy)
@@ -75,13 +88,22 @@ class BluePill(base.Part):
             self.pilot_state[0], self.pilot_state[1],
             dist, mode)
 
-    def read_status(self):
+    def get_raw_duties(self):
+        """Read raw servo values form the BluePill controller."""
+        msg = self.TX.pack(0, 0, self.CMD_NOOP, 0, 0)
+        self.s.write(msg)
+        RX = self.RX
+        msg = self.s.read(RX.size)
+        user_angle, user_throttle, unused_dist, unused_mode = RX.unpack(msg)
+        return user_angle, user_throttle
+    
+    def get_status(self):
         """Read the RC values, pilot values, distance and mode."""
         msg = self.TX.pack(0, 0, self.CMD_NOOP, 0, 0)
         self.s.write(msg)
         return self._recieve()
 
-    def __call__(self, pilot_angle, pilot_throttle, mode, force_mode=False):
+    def drive(self, pilot_angle, pilot_throttle, mode="local", force_mode=False):
         """Steer the car and select autonomy."""
         auto_enable = 0
         auto_nreset = 0
@@ -89,8 +111,10 @@ class BluePill(base.Part):
             auto_enable = self.MODES[mode]
             auto_nreset = ~auto_enable & 0x03
             self.last_mode = mode
-        pilot_angle = clip(pilot_angle, -1, 1)
-        pilot_throttle = clip(pilot_throttle, -1, self.throttle_clip)
+        pilot_angle = clip(pilot_angle,
+                           -self.angle_clip, self.angle_clip)
+        pilot_throttle = clip(pilot_throttle,
+                              -self.throttle_clip, self.throttle_clip)
         self.pilot_state = (pilot_angle, pilot_throttle)
         pilot_angle = pilot_angle * self.angle_gain + self.angle_neutral
         pilot_throttle = pilot_throttle * self.throttle_gain + self.throttle_neutral
@@ -109,7 +133,6 @@ class BluePill(base.Part):
     def stop_and_disengage_autonomy(self):
         """Stop the car and disengage the autopilot."""
         msg = self.TX.pack(self.angle_neutral, self.throttle_neutral,
-                           self.CMD_SET_SERVOS,
-                           auto_enable=0, auto_nreset=self.MODES["local"])
+                           self.CMD_SET_SERVOS, 0, self.MODES["local"])
         self.s.write(msg)
         return self._recieve()
