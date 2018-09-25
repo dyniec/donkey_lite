@@ -11,7 +11,7 @@ timer = parts.Timer(frequency=20)
 
 
 DIST_THRESHOLD = 750
-FORWARD_SPEED = 0.25
+FORWARD_SPEED = 0.15
 BACKWARD_SPEED = -0.3
 back_counter = 0
 
@@ -24,8 +24,9 @@ try:
 
         if back_counter > 0:
             print("break ticks left: ", back_counter)
-            bluepill.drive(0, BACKWARD_SPEED)
+            bluepill.drive(0.75, BACKWARD_SPEED)
             back_counter -= 1
+            #bluepill.drive(0.0,0.0)
         else:
             if distance > DIST_THRESHOLD:
                 bluepill.drive(0, FORWARD_SPEED)

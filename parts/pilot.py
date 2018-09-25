@@ -2,7 +2,7 @@ from . import base
 
 class KerasPilot(base.Part):
     def __init__(self, model_path):
-        super(Keras, self).__init__()
+        super(KerasPilot, self).__init__()
         import keras as K
         self.model = K.models.load_model(model_path)
 
