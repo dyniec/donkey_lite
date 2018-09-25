@@ -1,9 +1,8 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import io
+import json
 import logging
+import os
+import random
 import socket
 import time
 import threading
@@ -16,7 +15,7 @@ import tornado.gen
 import numpy as np
 import PIL.Image
 
-from . import base
+from .. import base
 
 
 logger = logging.getLogger(__name__ )
@@ -43,20 +42,28 @@ def arr_to_binary(arr):
     img.save(f, format='jpeg')
     return f.getvalue()
 
-
-class WebCameraStream(tornado.web.Application):
+class WebStatus(tornado.web.Application):
     port = 8887
 
     def __init__(self):
         logger.info('Starting Donkey Server...')
-        self.img_arr = None
+        self.img_arr = np.zeros((160, 120, 3))
+        self.status = {}
+        self.recording = False
+        self.drive_mode = "user"
+        self.vehicle_running = False
 
-        # self.ip_address = util.web.get_ip_address()
-        # self.access_url = 'http://{}:{}'.format(self.ip_address, self.port)
+
+
+        this_dir = os.path.dirname(os.path.realpath(__file__))
+        self.static_file_path = os.path.join(this_dir, 'templates', 'static')
 
         handlers = [
-            (r"/", tornado.web.RedirectHandler, dict(url="/video")),
+            (r"/", tornado.web.RedirectHandler, dict(url="/status")),
             (r"/video", VideoAPI),
+            (r"/status", StatusAPI),
+            (r"/updates", UpdateAPI),
+            (r"/static/(.*)", tornado.web.StaticFileHandler, {"path": self.static_file_path}),
             ]
 
         settings = {'debug': True}
@@ -71,7 +78,7 @@ class WebCameraStream(tornado.web.Application):
         self._thread.start()
     
     def say_hello(self):
-        print("You can watch the camera stream at http://%s:8887/video" %
+        print("You can watch the camera stream at http://%s:8887/status" %
               (get_ip_address(), ))
 
     def stop(self):
@@ -83,6 +90,33 @@ class WebCameraStream(tornado.web.Application):
 
     def set_image(self, img_arr):
         self.img_arr = img_arr
+
+    def set_car_status(self, status):
+        self.status = status
+
+
+class UpdateAPI(tornado.web.RequestHandler):
+    def get(self):
+        data = self.application.status
+        if data:
+            data = data._asdict()
+        self.write(json.dumps(data))
+
+
+class StatusAPI(tornado.web.RequestHandler):
+    def get(self):
+        data = {}
+        self.render("templates/status.html", **data)
+
+    def post(self):
+        """
+        Receive post requests as user changes the angle
+        and throttle of the vehicle on a the index webpage
+        """
+        data = tornado.escape.json_decode(self.request.body)
+        self.application.recording = data["recording"]
+        self.application.drive_mode =  data["drive_mode"]
+        self.application.vehicle_running = data["vehicle_running"]
 
 
 class VideoAPI(tornado.web.RequestHandler):

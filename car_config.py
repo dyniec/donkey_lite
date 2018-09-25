@@ -1,7 +1,12 @@
 bluepill_configs = {
     '01': {},
     '02': {},
-    '03': {},
+    '03': {'steer_min': 3281,
+           'steer_mid': 4421,
+           'steer_max': 5395,
+           'throttle_min': 2775,
+           'throttle_mid': 4538,
+           'throttle_max': 6305},
     '04': {},
     '05': {},
     '06': {},

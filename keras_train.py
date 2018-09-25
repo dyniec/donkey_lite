@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 
 import argparse
+import json
+import os
+from scipy import ndimage
 import zipfile
 
 import numpy as np
@@ -10,7 +13,7 @@ import keras.layers as KL
 
 def read_zipfile(file_name):
     records = []
-    with zipfile.ZipFile('simulated.zip') as archive:
+    with zipfile.ZipFile(file_name) as archive:
         for fileinfo in archive.filelist:
             filename = fileinfo.filename
             if not filename.endswith('.json') or filename.endswith('meta.json'):
@@ -21,11 +24,10 @@ def read_zipfile(file_name):
             dirname = os.path.dirname(filename)
             # ucinamy 'record_' z przodu i '.json' z tylu
             step_number = int(basename[7:-5])
-            with archive.open(os.path.join(
-                    dirname, data['cam/image_array'])) as image_file:
+            with archive.open(dirname + '/' + data['image_array']) as image_file:
                 image = ndimage.imread(image_file) / 255.0
             records.append((step_number, image, 
-                            data['user/angle'], data['user/throttle']))
+                            data['user_angle'], data['user_throttle']))
     records.sort(key=lambda x: x[0])
     images = np.array([r[1] for r in records], dtype='float32')
     angles = np.array([r[2] for r in records], dtype='float32')[:, None]
@@ -72,7 +74,7 @@ def train_model(savepath, model, images, angles, throttles):
     ) = np.split(throttles, [-1000, -500])
 
     callbacks = [
-        K.callbacks.ModelCheckpoint(savepath, save_best_only=True)
+        K.callbacks.ModelCheckpoint(savepath, save_best_only=True),
         K.callbacks.EarlyStopping(monitor='val_loss',
                                   min_delta=.0005,
                                   patience=5,
@@ -96,6 +98,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     images, angles, throttles = read_zipfile(args.zipfile)
-
+    model = build_model()
     train_model(args.savepath, model, images, angles, throttles)
 

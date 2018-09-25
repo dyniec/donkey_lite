@@ -5,7 +5,8 @@ import parts
 
 timer = parts.Timer(frequency=20)
 cam = parts.PiCamera()
-stream = parts.WebCameraStream()
+# cam = parts.FakeCamera()
+web_stream = parts.WebStatus()
 
 # add tub to save data
 inputs = ['image_array', 'timestamp']
@@ -17,7 +18,7 @@ try:
         timer.tick()
         timestamp = str(datetime.datetime.utcnow())
         img = cam.get_image()
-        stream.set_image(img)
+        web_stream.set_image(img)
         tub.write(img, timestamp)
 finally:
     pass

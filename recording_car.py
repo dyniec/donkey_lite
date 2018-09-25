@@ -9,7 +9,7 @@ bluepill = parts.BluePill(**car_config.bluepill_configs[MY_CAR])
 
 timer = parts.Timer(frequency=20)
 cam = parts.PiCamera()
-stream = parts.WebCameraStream()
+web_stream = parts.WebStatus()
 
 # add tub to save data
 inputs = ['user_angle', 'user_throttle', 'distance', 'image_array', 'timestamp']
@@ -33,7 +33,8 @@ try:
             is_recording = False
             print(timestamp, "Recording disabled")
         img = cam.get_image()
-        stream.set_image(img)
+        web_stream.set_image(img)
+        web_stream.set_car_status(car_status)
         if is_recording:
             tub.write(car_status.user_angle,
                     car_status.user_throttle,
